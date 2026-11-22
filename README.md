@@ -1,5 +1,82 @@
 Consumer Expenditure Survey (CE) Public-Use Microdata
 
+# CE Entertainment Spending: Segment Sizing for Marketing
+
+Which kinds of US households spend on entertainment, how much, and how confident can we be? Built on the BLS Consumer Expenditure Survey (CE) public-use microdata.
+
+## Decision this project supports
+
+A company with an entertainment product or service (tickets, streaming, pets, hobbies, etc.) needs to decide **which household segments to market to and how much budget each deserves**. This project ranks segments by estimated market size and spending behavior, with uncertainty attached.
+
+## What the project answers
+
+For each entertainment category and each household segment (income band, age, region, household size, homeownership, and other targetable traits):
+
+1. **Participation rate:** what share of households spent anything in the category?
+2. **Conditional spend:** among households that spent, how much?
+3. **Expected spend per household:** participation x conditional spend.
+4. **Share of wallet:** entertainment as a fraction of total household spending.
+5. **Index vs. average household:** 100 = the average US household. A segment at 140 over-indexes.
+6. **Market size:** segment households x expected spend, in estimated dollars.
+7. **Income sensitivity:** does the category behave like a necessity or a luxury as income rises?
+8. **Stability:** does the pattern hold across years, or was it a one-year artifact?
+
+Every estimate ships with a confidence interval, computed with the survey's replicate weights.
+
+## What the project predicts
+
+A two-part (hurdle) model per category:
+
+| Part | Question | Output |
+|------|----------|--------|
+| 1. Participation | Will a household with these traits spend anything on this category? | Calibrated probability |
+| 2. Amount | If it spends, how much? | Expected dollars (trained on spenders only) |
+
+Combined: `expected spend = P(spend) x E[amount | spend]`
+
+Models are compared on weighted metrics, calibration, and segment-level error. Validation is **out-of-time** (train on earlier years, test on the latest), not a random split.
+
+Predictors are limited to traits an ad platform or marketing team can actually target.
+
+## What the project does NOT answer
+
+Be clear about this when presenting results:
+
+- **No product or brand data.** CE records spending categories, not products. It cannot say whether a household would buy a specific item.
+- **No marketing response.** There are no ad exposures, conversions, or purchase intent. "Likely to buy product X" is out of scope.
+- **No "what they keep" or retention.** The survey doesn't measure it.
+- **Small segments are noisy.** Public files hold a few thousand households per year. Narrow segments get wide intervals and should not drive budget decisions.
+- **Top incomes are top-coded.** Conclusions about the highest-income households are weak.
+- **Pandemic years (2020-21) are distorted** and are treated deliberately, not ignored.
+- **Survey recall and category coverage differ** between the Interview and Diary surveys.
+
+## Data
+
+- Source: BLS Consumer Expenditure Surveys, Public-Use Microdata (PUMD): https://www.bls.gov/cex/pumd_data.htm
+- Files used: household/consumer-unit file (income, demographics, weights) joined to expenditure files via the household ID. Variable names are to be confirmed against the data dictionary.
+- Note: since 2020, Interview packages contain Q2-Q4 of the year plus Q1 of the next year. Year definitions must account for this.
+- "Entertainment" is defined by a documented mapping from CE item codes (UCCs) to categories. See `docs/category_mapping.md` (to be written).
+
+## Methodology notes
+
+- **Survey weights:** all estimates are weighted. Standard errors use the replicate weights (BRR), not textbook formulas.
+- **Income:** multiply-imputed, so estimates are combined across imputations. Income is used as brackets or quantiles because of top-coding.
+- **Zero-inflated spending:** handled by the hurdle model above.
+- **Inflation:** multi-year comparisons are CPI-adjusted.
+- **Validation:** results are checked against BLS's published tables for at least one year before modeling.
+
+## Planned pipeline
+
+1. Download and load each year's files (parameterized by year, idempotent, backfillable).
+2. Transform and test (category mapping, weights, data checks).
+3. Compute segment tables and fit models.
+4. Serve precomputed segment estimates through an API.
+5. Refresh annually when BLS releases new data, with drift checks on the new year.
+
+## Status
+
+Exploration phase: reviewing one year of data and the data dictionary before building the pipeline.
+
 Overview
 
 This project uses the U.S. Bureau of Labor Statistics (BLS) Consumer
@@ -33,235 +110,3 @@ The data are produced and maintained by the U.S. Bureau of Labor
 Statistics (BLS). Please cite BLS as the data provider when using
 these datasets.
 
-Suggested dataset citation
-
-U.S. Bureau of Labor Statistics. Consumer Expenditure Surveys,
-Public-Use Microdata. U.S. Department of Labor.
-https://www.bls.gov/cex/pumd.htm
-
-When publishing results, also specify the survey year(s), survey
-component (Interview or Diary), and specific public-use files used in
-the analysis.
-
-How to Download the Data
-
-The CE Public-Use Microdata are available directly from the BLS website.
-
-Step 1: Open the CE Public-Use Microdata page
-
-Go to:
-
-https://www.bls.gov/cex/pumd.htm
-
-Step 2: Choose the survey component
-
-The CE has two main components:
-
-Interview Survey: designed to collect information on larger or
-recurring expenditures and expenditures that respondents may have
-difficulty recalling over short periods.
-
-Diary Survey: respondents record expenditures as they occur over
-a shorter diary period and is particularly useful for smaller or
-frequently purchased items.
-
-Choose the component that matches your research question.
-
-Step 3: Choose the survey year
-
-Select the year of the public-use microdata you want to analyze.
-
-Keep the year consistent across the data files and documentation you
-use. Variable definitions and coding can change between years.
-
-Step 4: Download the required data files
-
-Download the CSV/data files associated with the survey component and
-year you are analyzing.
-
-Do not assume that every file on the BLS download page is required.
-CE microdata are distributed across multiple files, and the appropriate
-files depend on whether your analysis uses household characteristics,
-expenditures, income, assets, demographics, or other information.
-
-Also download the corresponding documentation/data
-dictionary/codebook for the same survey component and year.
-
-A typical project directory can be organized as:
-
-data/
-├── raw/
-│   ├── interview/
-│   │   └── YYYY/
-│   └── diary/
-│       └── YYYY/
-├── dictionaries/
-│   └── ce-pumd-interview-diary-dictionary.xlsx
-└── processed/
-
-Replace YYYY with the relevant survey year.
-
-Understanding the Data Dictionary
-
-The CE documentation contains two pieces of information that are
-especially important when working with the CSV files.
-
-1. Variable definitions
-
-The Variables section/sheet describes what each column represents.
-
-For example:
-
-ACQMETH → Method by which property was acquired
-ACQUIRMO → Month property was acquired
-ACQUIRYR → Year property was acquired
-
-If a CSV contains a column named ACQMETH, use the variable
-documentation to determine what the column measures.
-
-2. Value/code definitions
-
-The Codes section/sheet explains what coded values inside a variable
-mean.
-
-For example, a categorical variable might contain:
-
-1
-2
-3
-
-The codebook may define those values as:
-
-1 → Purchased for own use
-2 → Rented
-3 → Purchased as gift to others
-
-Therefore, the variable dictionary answers:
-
-What does this column represent?
-
-while the code dictionary answers:
-
-What does each value inside this column represent?
-
-Both are necessary for correctly interpreting the CE microdata.
-
-Important: Do Not Decode Every Numeric Column
-
-Not every numeric value in the CE data is a category code.
-
-For example, a column containing:
-
-125.50
-87.00
-42.75
-
-may represent an expenditure amount and should remain numeric.
-
-A column containing:
-
-1
-2
-1
-3
-
-may instead be a categorical variable whose values need to be translated
-using the codebook.
-
-Before converting or decoding a column, check its variable definition
-and the corresponding code information.
-
-Handling Survey Years
-
-Variable definitions and value codes can change across survey years.
-
-For reproducible analysis:
-
-Identify the year of each raw data file.
-
-Use the documentation corresponding to that year/component.
-
-Match the CSV variable name to the Variables documentation.
-
-Match the variable's coded values to the Codes documentation.
-
-Do not automatically assume that the same numeric code has the same
-meaning across all years.
-
-For longitudinal analysis, explicitly check whether variables and codes
-remain comparable across the years being combined.
-
-Referencing Data in Code
-
-When loading the raw files, preserve the original BLS variable names
-whenever possible.
-
-Example:
-
-import pandas as pd
-
-df = pd.read_csv("data/raw/interview/YYYY/your_file.csv")
-
-Keep the raw files unchanged and perform cleaning/decoding in a separate
-processing step.
-
-A useful workflow is:
-
-BLS raw CSV
-     ↓
-Load data
-     ↓
-Match columns to Variables dictionary
-     ↓
-Identify coded/categorical variables
-     ↓
-Match values to Codes dictionary
-     ↓
-Clean and transform
-     ↓
-Analysis / visualization / modeling
-
-Reproducibility
-
-To make analyses reproducible, record:
-
-BLS CE dataset name
-
-Survey component: Interview or Diary
-
-Survey year
-
-Exact files used
-
-Date the files were downloaded
-
-Data dictionary/codebook version
-
-Any filtering, cleaning, or recoding performed
-
-Do not modify the original downloaded files. Store transformed datasets
-separately so that the analysis can be traced back to the original BLS
-data.
-
-Data Citation in a Project
-
-For a project README, paper, portfolio project, or report, a concise
-reference can be written as:
-
-Data: U.S. Bureau of Labor Statistics, Consumer Expenditure
-Surveys, Public-Use Microdata. U.S. Department of Labor.
-https://www.bls.gov/cex/pumd.htm
-
-For a more complete reference, include the specific year and survey
-component:
-
-U.S. Bureau of Labor Statistics. Consumer Expenditure Surveys:
-Public-Use Microdata, [YEAR] [Interview/Diary] Survey. U.S.
-Department of Labor. https://www.bls.gov/cex/pumd.htm
-
-Disclaimer
-
-This project is an independent analysis of publicly available U.S.
-Bureau of Labor Statistics data. The BLS is the source of the underlying
-data and documentation but is not responsible for the analyses,
-interpretations, or conclusions presented in this project.
