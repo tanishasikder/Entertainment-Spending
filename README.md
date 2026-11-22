@@ -1,5 +1,3 @@
-Consumer Expenditure Survey (CE) Public-Use Microdata
-
 # CE Entertainment Spending: Segment Sizing for Marketing
 
 Which kinds of US households spend on entertainment, how much, and how confident can we be? Built on the BLS Consumer Expenditure Survey (CE) public-use microdata.
@@ -76,37 +74,3 @@ Be clear about this when presenting results:
 ## Status
 
 Exploration phase: reviewing one year of data and the data dictionary before building the pipeline.
-
-Overview
-
-This project uses the U.S. Bureau of Labor Statistics (BLS) Consumer
-Expenditure Surveys (CE) Public-Use Microdata to analyze household
-spending patterns.
-
-The Consumer Expenditure Surveys collect information on expenditures,
-income, demographics, and other characteristics of U.S. consumer units.
-The public-use microdata are provided by BLS as downloadable files that
-can be processed and analyzed at the household and expenditure-record
-level.
-
-This repository focuses on working with the raw CE microdata and the
-accompanying BLS documentation/codebooks needed to interpret the
-variables and coded values.
-
-Data Source
-
-Primary source: U.S. Bureau of Labor Statistics, Consumer
-Expenditure Surveys.
-
-Official CE website:
-
-https://www.bls.gov/cex/
-
-CE Public-Use Microdata:
-
-https://www.bls.gov/cex/pumd.htm
-
-The data are produced and maintained by the U.S. Bureau of Labor
-Statistics (BLS). Please cite BLS as the data provider when using
-these datasets.
-
